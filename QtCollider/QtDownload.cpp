@@ -92,7 +92,7 @@ void QtDownload::cancel() {
 
 void QtDownload::replyError(QNetworkReply::NetworkError errorCode)
 {
-	printf(m_reply->errorString().toStdString().c_str());
+    printf("%s", m_reply->errorString().toStdString().c_str());
 	printf("\n");
 	
 	// call action
