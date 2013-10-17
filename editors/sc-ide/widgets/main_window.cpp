@@ -620,6 +620,7 @@ void MainWindow::createMenus()
     menu->addSeparator();
     menu->addAction( mEditors->action(MultiEditor::NextDocument) );
     menu->addAction( mEditors->action(MultiEditor::PreviousDocument) );
+    menu->addAction( mEditors->action(MultiEditor::SwitchDocument) );
     menu->addSeparator();
     menu->addAction( mEditors->action(MultiEditor::SplitHorizontally) );
     menu->addAction( mEditors->action(MultiEditor::SplitVertically) );
@@ -1549,16 +1550,6 @@ void MainWindow::openHelp()
 void MainWindow::openHelpAboutIDE()
 {
     mHelpBrowserDocklet->browser()->gotoHelpFor("Guides/SCIde");
-
-    mHelpBrowserDocklet->setDetached(true);
-
-    QRect availableGeometry = QApplication::desktop()->availableGeometry(mHelpBrowserDocklet->window());
-    QRect geometry;
-    geometry.setWidth( qMin(700, availableGeometry.width()) );
-    geometry.setHeight( availableGeometry.height() - 150 );
-    geometry.moveCenter( availableGeometry.center() );
-
-    mHelpBrowserDocklet->window()->setGeometry( geometry );
     mHelpBrowserDocklet->focus();
 }
 
