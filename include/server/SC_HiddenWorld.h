@@ -81,10 +81,10 @@ struct DeleteGraphDefMsg {
 };
 
 
-typedef MsgFifoNoFree<TriggerMsg, 1024> TriggersFifo;
-typedef MsgFifoNoFree<NodeReplyMsg, 1024> NodeReplyFifo;
-typedef MsgFifoNoFree<NodeEndMsg, 1024> NodeEndsFifo;
-typedef MsgFifoNoFree<DeleteGraphDefMsg, 512> DeleteGraphDefsFifo;
+typedef MsgFifoNoFree<TriggerMsg, 4*1024> TriggersFifo;
+typedef MsgFifoNoFree<NodeReplyMsg, 4*1024> NodeReplyFifo;
+typedef MsgFifoNoFree<NodeEndMsg, 4*1024> NodeEndsFifo;
+typedef MsgFifoNoFree<DeleteGraphDefMsg, 4*512> DeleteGraphDefsFifo;
 typedef HashTable<struct GraphDef, Malloc> GrafDefTable;
 
 struct HiddenWorld
