@@ -669,6 +669,7 @@ Server {
 	}
 
 	bootServerApp {
+		var f;
 		if (inProcess, {
 			"booting internal".inform;
 			this.bootInProcess;
@@ -683,6 +684,14 @@ Server {
 
 			pid = (program ++ options.asOptionsString(addr.port)).unixCmd;
 			//unixCmd(program ++ options.asOptionsString(addr.port)).postln;
+			if( options.protocol == \tcp ){
+				f = { |n|
+					if(n!=0) {
+						try { addr.connect } { 0.2.wait; f.(n-1) }
+					}
+				};
+				fork{ f.(10) }
+			};
 			("booting " ++ addr.port.asString).inform;
 		});
 	}
@@ -760,6 +769,7 @@ Server {
 			};
 		};
 		addr.sendMsg("/quit");
+		if( options.protocol == \tcp ){ addr.disconnect };
 		if (inProcess, {
 			this.quitInProcess;
 			"quit done\n".inform;
