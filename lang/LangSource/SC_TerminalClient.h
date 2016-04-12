@@ -66,6 +66,7 @@ public:
 			  mCallRun(false),
 			  mCallStop(false),
 			  mStandalone(false),
+			  mProject(false),
 			  mArgc(0), mArgv(0)
 		{ }
 
@@ -76,6 +77,8 @@ public:
 		int				mArgc;
 		char**			mArgv;
 		bool			mStandalone;
+		bool			mProject;
+
 	};
 
 	SC_TerminalClient(const char* name);

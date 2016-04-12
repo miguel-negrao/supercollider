@@ -3544,6 +3544,19 @@ static int prLanguageConfig_getCurrentConfigPath(struct VMGlobals * g, int numAr
 	return errNone;
 }
 
+static int prLanguageConfig_getCurrentConfigDirectory(struct VMGlobals * g, int numArgsPushed)
+{
+	PyrSlot *a = g->sp;
+	PyrString* str = newPyrString(g->gc, gLanguageConfig->getConfigFileDirectory().c_str(), 0, false);
+	if(str->size == 0) {
+		SetNil(a);
+	} else {
+		SetObject(a, str);
+	}
+
+	return errNone;
+}
+
 static int prLanguageConfig_writeConfigFile(struct VMGlobals * g, int numArgsPushed)
 {
 	PyrSlot *fileString = g->sp;
@@ -3584,6 +3597,12 @@ static int prLanguageConfig_setPostInlineWarnings(struct VMGlobals * g, int numA
 	return errNone;
 }
 
+static int prLanguageConfig_getProjectOpen(struct VMGlobals * g, int numArgsPushed)
+{
+	PyrSlot *result = g->sp;
+	SetBool(result, gLanguageConfig->getProject());
+	return errNone;
+}
 
 static int prVersionMajor(struct VMGlobals * g, int numArgsPushed)
 {
@@ -4162,6 +4181,7 @@ void initPrimitives()
 
 	definePrimitive(base, index++, "_AppClock_SchedNotify", prAppClockSchedNotify, 1, 0);
 	definePrimitive(base, index++, "_LanguageConfig_getCurrentConfigPath", prLanguageConfig_getCurrentConfigPath, 1, 0);
+	definePrimitive(base, index++, "_LanguageConfig_getCurrentConfigDirectory", prLanguageConfig_getCurrentConfigDirectory, 1, 0);
 	definePrimitive(base, index++, "_LanguageConfig_getIncludePaths", prLanguageConfig_getIncludePaths, 1, 0);
 	definePrimitive(base, index++, "_LanguageConfig_getExcludePaths", prLanguageConfig_getExcludePaths, 1, 0);
 	definePrimitive(base, index++, "_LanguageConfig_addIncludePath", prLanguageConfig_addIncludePath, 2, 0);
@@ -4171,6 +4191,8 @@ void initPrimitives()
 	definePrimitive(base, index++, "_LanguageConfig_writeConfigFile", prLanguageConfig_writeConfigFile, 2, 0);
 	definePrimitive(base, index++, "_LanguageConfig_getPostInlineWarnings", prLanguageConfig_getPostInlineWarnings, 1, 0);
 	definePrimitive(base, index++, "_LanguageConfig_setPostInlineWarnings", prLanguageConfig_setPostInlineWarnings, 2, 0);
+	definePrimitive(base, index++, "_LanguageConfig_getProjectOpen", prLanguageConfig_getProjectOpen, 1, 0);
+
 
 	definePrimitive(base, index++, "_SC_VersionMajor", prVersionMajor, 1, 0);
 	definePrimitive(base, index++, "_SC_VersionMinor", prVersionMinor, 1, 0);

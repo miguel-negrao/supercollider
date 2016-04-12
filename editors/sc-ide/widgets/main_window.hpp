@@ -29,6 +29,8 @@
 
 #include "util/status_box.hpp"
 
+#include <functional>
+
 namespace ScIDE {
 
 class Main;
@@ -70,6 +72,10 @@ public:
         DocCloseAll,
         DocReload,
         ClearRecentDocs,
+		ProjectNew,
+		ProjectOpen,
+		ProjectSaveAs,
+		ProjectClose,
 
         // Sessions
         NewSession,
@@ -148,6 +154,11 @@ public Q_SLOTS:
     void closeDocument();
     void closeAllDocuments();
 
+	void newProject();
+	void openProject();
+	void closeProject();
+    void saveProjectAs();
+
     void showCmdLine();
     void showCmdLine( const QString & );
     void showFindTool();
@@ -195,6 +206,7 @@ private Q_SLOTS:
     void showAboutQT();
     void cmdLineForCursor();
 
+
 protected:
     virtual void closeEvent(QCloseEvent *event);
     virtual void dragEnterEvent( QDragEnterEvent * );
@@ -212,6 +224,7 @@ private:
     bool checkFileExtension( const QString & fpath );
     void toggleInterpreterActions( bool enabled);
     void applyCursorBlinkingSettings( Settings::Manager * );
+    static void projectWriteDialog(std::function<void (QString)>);
     QString documentOpenPath() const;
     QString documentSavePath( Document * ) const;
 

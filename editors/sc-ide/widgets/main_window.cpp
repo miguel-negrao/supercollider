@@ -68,6 +68,11 @@
 #include <QMimeData>
 #include <QMetaMethod>
 
+#include <fstream>
+#include <functional>
+
+#include "yaml-cpp/yaml.h"
+
 namespace ScIDE {
 
 static QWidget * findFirstResponder
@@ -332,6 +337,19 @@ void MainWindow::createActions()
             Main::instance()->documentManager(), SLOT(clearRecents()));
     settings->addAction( action, "ide-clear-recent-documents", ideCategory);
 
+	mActions[ProjectNew] = action = new QAction(tr("New Project"), this);
+	connect(action, SIGNAL(triggered()), this, SLOT(newProject()));
+
+	mActions[ProjectOpen] = action = new QAction(tr("Open Project"), this);
+	connect(action, SIGNAL(triggered()), this, SLOT(openProject()));
+
+	mActions[ProjectSaveAs] = action = new QAction(tr("Save Project As"), this);
+	connect(action, SIGNAL(triggered()), this, SLOT(saveProjectAs()));
+
+	mActions[ProjectClose] = action = new QAction(tr("Close Project"), this);
+	connect(action, SIGNAL(triggered()), this, SLOT(closeProject()));
+
+
     // Sessions
     mActions[NewSession] = action = new QAction(
         QIcon::fromTheme("document-new"), tr("&New Session"), this);
@@ -553,6 +571,11 @@ void MainWindow::createMenus()
     menu->addAction( mActions[DocSaveAs] );
     menu->addAction( mActions[DocSaveAsExtension] );
     menu->addAction( mActions[DocSaveAll] );
+	menu->addSeparator();
+	menu->addAction( mActions[ProjectNew] );
+	menu->addAction( mActions[ProjectOpen] );
+	menu->addAction( mActions[ProjectSaveAs] );
+	menu->addAction( mActions[ProjectClose] );
     menu->addSeparator();
     menu->addAction( mActions[DocReload] );
     menu->addSeparator();
@@ -1311,14 +1334,30 @@ bool MainWindow::promptSaveDocs()
 void MainWindow::updateWindowTitle()
 {
     Session *session = mMain->sessionManager()->currentSession();
+    Settings::Manager* s = mMain->settings();
     GenericCodeEditor *editor = mEditors->currentEditor();
     Document *doc = editor ? editor->document() : 0;
 
     QString title;
 
-    if (session) {
-        title.append(session->name());
-        if (doc) title.append(": ");
+    s->beginGroup("IDE/interpreter");;
+    QString configFile = s->value("configFile").toString();
+    bool isProject = s->value("project").toBool();
+    s->endGroup();
+
+    if(isProject) {
+         QFileInfo configInfo = QFileInfo(configFile);
+         title.append(configInfo.fileName());
+         if (doc) title.append(": ");
+         if (session) {
+            title.append(session->name());
+            if (doc) title.append(": ");
+        }
+    } else {
+        if (session) {
+            title.append(session->name());
+            if (doc) title.append(": ");
+        }
     }
 
     if (doc) {
@@ -1349,6 +1388,228 @@ void MainWindow::updateWindowTitle()
     title.append("SuperCollider IDE");
 
     setWindowTitle(title);
+}
+
+void MainWindow::projectWriteDialog(std::function<void (QString)> action)
+{
+    QFileDialog dialog(mInstance);
+    dialog.setAcceptMode( QFileDialog::AcceptSave );
+    dialog.setFileMode( QFileDialog::AnyFile );
+
+    QStringList filters = QStringList()
+                          << tr("All Files (*)")
+                          << tr("SuperCollider Projects(*.scproj)");
+
+    dialog.setNameFilters(filters);
+
+#ifdef Q_OS_MAC
+    QWidget *last_active_window = QApplication::activeWindow();
+#endif
+
+    int result = dialog.exec();
+
+    // FIXME: workaround for Qt bug 25295
+    // See SC issue #678
+#ifdef Q_OS_MAC
+    if (last_active_window)
+        last_active_window->activateWindow();
+#endif
+
+    QString save_path;
+
+    if (result == QDialog::Accepted) {
+        save_path = dialog.selectedFiles()[0];
+
+        if ( QFile::exists(save_path) ) {
+            QString msg =
+                    tr("selected file name already exists.\n\n"
+                       "Do you wish to overwrite it?");
+            QMessageBox::StandardButton result =
+                    QMessageBox::warning(mInstance,
+                                         tr("Overwrite File?"),
+                                         msg,
+                                         QMessageBox::Yes | QMessageBox::No);
+            if (result != QMessageBox::Yes)
+                save_path.clear();
+        }
+    }
+
+    if (!save_path.isEmpty()) {
+        action(save_path);
+    }
+}
+
+void MainWindow::newProject()
+{
+    projectWriteDialog([this](QString save_path){
+        using namespace YAML; using std::ofstream;
+        Emitter out;
+        out.SetIndent(4);
+        out.SetMapFormat(Block);
+        out.SetSeqFormat(Block);
+        out.SetBoolFormat(TrueFalseBool);
+
+        out << BeginMap;
+
+        out << Key << "includePaths";
+        out << Value << BeginSeq;
+        out << EndSeq;
+
+        out << Key << "excludePaths";
+        out << Value << BeginSeq;
+        out << EndSeq;
+
+        out << Key << "postInlineWarnings";
+        out << Value << true;
+
+        out << Key << "excludeDefaultPaths";
+        out << Value << false;
+
+        out << Key << "project";
+        out << Value << true;
+
+        out << EndMap;
+        ofstream fout(save_path.toStdString().c_str());
+        fout << out.c_str();
+
+        Settings::Manager *settings = mMain->settings();
+        settings->beginGroup("IDE/interpreter");
+        bool previousWasProject = settings->value("project").toBool();
+        if( !previousWasProject )
+        {
+            settings->setValue("previousConfigFile", settings->value("configFile").toString() );
+        }
+        settings->setValue("configFile", save_path );
+        settings->setValue("project", true );
+        settings->endGroup();
+        updateWindowTitle();
+    });
+}
+
+void MainWindow::openProject()
+{
+    //set lang file to this file
+    //set mode to project mode
+    QFileDialog dialog (this, Qt::Dialog);
+    dialog.setModal(true);
+    dialog.setWindowModality(Qt::ApplicationModal);
+
+    dialog.setFileMode( QFileDialog::ExistingFiles );
+
+    QString path = documentOpenPath();
+    QFileInfo path_info(path);
+    if (path_info.isDir())
+        dialog.setDirectory(path);
+    else
+        dialog.setDirectory(path_info.dir());
+
+    QStringList filters;
+    filters
+            << tr("All Files (*)")
+            << tr("SuperCollider Projects(*.scproj)");
+    dialog.setNameFilters(filters);
+
+#ifdef Q_OS_MAC
+    QWidget *last_active_window = QApplication::activeWindow();
+#endif
+
+    if (dialog.exec())
+    {
+        bool isProject = false;
+        Settings::Manager *settings = mMain->settings();
+        QStringList filenames = dialog.selectedFiles();
+        if( !filenames.isEmpty() )
+        {
+            QString configFile = filenames.first();
+
+            //std::cout << "loading project: " << configFile.toStdString();
+
+            QFileInfo configFileInfo(configFile);
+            const bool configFileExists = configFileInfo.exists();
+
+            if (!configFileExists)
+                return;
+
+            using namespace YAML;
+            try {
+                std::ifstream fin(configFile.toStdString().c_str());
+                Parser parser(fin);
+
+                Node doc;
+                while(parser.GetNextDocument(doc)) {
+                    const Node * project = doc.FindValue("project");
+                    if (project) {
+                        try {
+                            isProject = project->to<bool>();
+                        } catch(...) {
+                            qDebug() << "Warning: Cannot parse config file entry \"project\"";
+                        }
+                    }
+                }
+            } catch (std::exception & e) {
+            }
+
+            if(isProject) {
+                settings->beginGroup("IDE/interpreter");
+                bool previousWasProject = settings->value("project").toBool();
+                if( !previousWasProject )
+                {
+                    settings->setValue("previousConfigFile", settings->value("configFile").toString() );
+                }
+                settings->setValue("configFile", configFile );
+                settings->setValue("project", true );
+                settings->endGroup();
+                updateWindowTitle();
+                QMessageBox::information(this, tr("Sclang configuration file updated"),
+                         tr("The SuperCollider language configuration has been updated. "
+                            "Reboot the interpreter to apply the changes."));
+            } else {
+                QMessageBox::information(this, tr("SC Project"),tr("Not a project file."));
+            }
+        }
+    }
+
+    // FIXME: workaround for Qt bug 25295
+    // See SC issue #678
+#ifdef Q_OS_MAC
+    if (last_active_window)
+        last_active_window->activateWindow();
+#endif
+}
+
+void MainWindow::saveProjectAs()
+{
+    Settings::Manager *settings = mMain->settings();
+    bool isProject = settings->value("IDE/interpreter/project").toBool();
+    if( isProject )
+    {
+        QString currentConfigFile = settings->value("IDE/interpreter/configFile").toString();
+        if( QFile::exists(currentConfigFile) )
+            projectWriteDialog([this,settings,currentConfigFile](QString save_path){
+                QFile(currentConfigFile).copy(save_path);
+                settings->setValue("IDE/interpreter/configFile", save_path );
+                updateWindowTitle();
+            });
+        else
+            QMessageBox::information(this, tr("SC project - save as"),
+                 tr("Current project file doesn't exist on disk"));
+    } else {
+        QMessageBox::information(this, tr("SC project - save as"),
+                         tr("No SC project currently open "));
+    }
+}
+
+
+void MainWindow::closeProject()
+{
+    Settings::Manager *settings = mMain->settings();
+    settings->beginGroup("IDE/interpreter");
+    QString previousConfigFile = settings->value("previousConfigFile").toString();
+    if(previousConfigFile.isEmpty()){ previousConfigFile = QString("sclang_conf.yaml"); }
+    settings->setValue("configFile", previousConfigFile);
+    settings->setValue("project", false );
+    settings->endGroup();
+    updateWindowTitle();
 }
 
 void MainWindow::toggleFullScreen()

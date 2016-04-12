@@ -152,8 +152,6 @@ void ScProcess::startLanguage (void)
     if(!configFile.isEmpty())
         sclangArguments << "-l" << configFile;
     sclangArguments << "-i" << "scqt";
-    if(standalone)
-        sclangArguments << "-a";
 
     if(!workingDirectory.isEmpty())
         setWorkingDirectory(workingDirectory);

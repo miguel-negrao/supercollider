@@ -1920,6 +1920,18 @@ void finiPassOne()
 
 static bool passOne_ProcessDir(const char *dirname, int level)
 {
+
+	boost::filesystem::path projectdirname;
+	bool isProjectPath = false;
+	if( (level == 0) && gLanguageConfig && ( gLanguageConfig->getExcludeDefaultPaths() || gLanguageConfig->getProject() )) {
+		boost::filesystem::path bfsdirname = boost::filesystem::path(dirname);
+		if( !bfsdirname.is_absolute() ){
+			isProjectPath = true;
+			projectdirname = gLanguageConfig->getConfigFileDirectory() /= bfsdirname;
+			dirname = projectdirname.c_str();
+		}
+	}
+
 	if (!sc_DirectoryExists(dirname))
 		return true;
 
@@ -1933,8 +1945,12 @@ static bool passOne_ProcessDir(const char *dirname, int level)
 		post("\texcluding dir: '%s'\n", dirname);
 		return success;
 	}
-
-	if (level == 0) post("\tcompiling dir: '%s'\n", dirname);
+	
+	if(isProjectPath) {
+		if (level == 0) post("\tcompiling dir from project: '%s'\n", dirname);
+	} else {
+		if (level == 0) post("\tcompiling dir: '%s'\n", dirname);
+	}
 
 	SC_DirHandle *dir = sc_OpenDir(dirname);
 	if (!dir) {
@@ -2115,7 +2131,7 @@ void shutdownLibrary()
 	SC_LanguageConfig::freeLibraryConfig();
 }
 
-SCLANG_DLLEXPORT_C bool compileLibrary(bool standalone)
+SCLANG_DLLEXPORT_C bool compileLibrary()
 {
 	//printf("->compileLibrary\n");
 	shutdownLibrary();
@@ -2124,7 +2140,7 @@ SCLANG_DLLEXPORT_C bool compileLibrary(bool standalone)
 	gNumCompiledFiles = 0;
 	compiledOK = false;
 
-	SC_LanguageConfig::readLibraryConfig(standalone);
+	SC_LanguageConfig::readLibraryConfig();
 
 	compileStartTime = elapsedTime();
 
