@@ -31,6 +31,7 @@
 #include "sc_introspection.hpp"
 #include "sc_process.hpp"
 #include "sc_server.hpp"
+#include "session_manager.hpp"
 #include "settings/manager.hpp"
 #include "util/standard_dirs.hpp"
 #include "../primitives/localsocket_utils.hpp"
@@ -139,13 +140,15 @@ void ScProcess::startLanguage (void)
     }
 
     Settings::Manager *settings = Main::settings();
-    settings->beginGroup("IDE/interpreter");
 
-    QString workingDirectory = settings->value("runtimeDir").toString();
-    QString configFile = settings->value("configFile").toString();
-    bool standalone = settings->value("standalone").toBool();
+    QString workingDirectory = settings->value("IDE/interpreter/runtimeDir").toString();
 
-    settings->endGroup();
+    QString configFile;
+    if( settings->value("IDE/useLanguageConfigFromSession").toBool() )
+        configFile = Main::sessionManager()->currentSession()->value("IDE/interpreter/configFile").toString();
+    else
+        configFile = settings->value("IDE/interpreter/configFile").toString();
+
 
     QString sclangCommand;
 #ifdef Q_OS_MAC

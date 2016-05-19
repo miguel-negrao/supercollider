@@ -29,7 +29,11 @@ namespace Ui {
     class SclangProjectConfigPage;
 }
 
-namespace ScIDE { namespace Settings {
+namespace ScIDE {
+
+struct Session;
+
+namespace Settings {
 
 class Manager;
 
@@ -38,12 +42,13 @@ class SclangProjectPage : public QWidget
     Q_OBJECT
 
 public:
-	SclangProjectPage(QWidget *parent = 0);
-	~SclangProjectPage();
+    SclangProjectPage(QWidget *parent = 0);
+    ~SclangProjectPage();
+    void loadTemp( Manager *, Session *, bool);
 
 public Q_SLOTS:
-    void load( Manager * );
-    void store( Manager * );
+    void load( Manager *, Session *);
+    void store( Manager *, Session *, bool);
 
 private Q_SLOTS:
     void addIncludePath();
@@ -61,7 +66,6 @@ private:
     Ui::SclangProjectConfigPage *ui;
 
     bool sclangConfigDirty;
-    bool project;
     QString selectedLanguageConfigFile;
     std::string selectedLanguageConfigFileDir;
     QDir qSelectedLanguageConfigFileDir;

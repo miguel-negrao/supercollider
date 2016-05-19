@@ -223,6 +223,9 @@ private:
     void updateSessionsMenu();
     void updateClockWidget( bool isFullScreen );
     void prOpenProject(QString path);
+    template <class T> void currentSettingsForLanguageConfig(std::function<void (T*)> action);
+    template <class T> void openProjectSaveSettings(T *settings, QString path);
+    template <class T> void closeProjectSaveSettings(T * settings);
     void openSession( QString const & sessionName );
     bool checkFileExtension( const QString & fpath );
     void toggleInterpreterActions( bool enabled);

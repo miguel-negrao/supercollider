@@ -27,6 +27,7 @@
 
 #include "sclang_page.hpp"
 #include "ui_settings_sclang.h"
+#include "../../core/session_manager.hpp"
 #include "../../core/settings/manager.hpp"
 #include "../../core/util/standard_dirs.hpp"
 
@@ -71,15 +72,20 @@ SclangPage::~SclangPage()
     delete ui;
 }
 
-void SclangPage::load( Manager *s )
+
+void SclangPage::loadTemp(Manager *s, Session *session, bool useLanguageConfigFromSession)
 {
     s->beginGroup("IDE/interpreter");
-
     ui->autoStart->setChecked( s->value("autoStart").toBool() );
     ui->runtimeDir->setText( s->value("runtimeDir").toString() );
+    s->endGroup();
 
     QStringList availConfigFiles = availableLanguageConfigFiles();
-    QString configSelectedLanguageConfigFile = s->value("configFile").toString();
+    QString configSelectedLanguageConfigFile;
+    if( useLanguageConfigFromSession )
+        configSelectedLanguageConfigFile = session->value("IDE/interpreter/configFile").toString();
+    else
+        configSelectedLanguageConfigFile = s->value("IDE/interpreter/configFile").toString();
 
     ui->activeConfigFileComboBox->clear();
     ui->activeConfigFileComboBox->addItems(availConfigFiles);
@@ -88,19 +94,47 @@ void SclangPage::load( Manager *s )
         ui->activeConfigFileComboBox->setCurrentIndex(index);
     selectedLanguageConfigFile = configSelectedLanguageConfigFile; // Happens after setting the combobox entries, since the code triggers stateChanged event.
 
+    readLanguageConfig();
+}
+
+void SclangPage::load(Manager *s, Session *session)
+{
+    s->beginGroup("IDE/interpreter");
+    ui->autoStart->setChecked( s->value("autoStart").toBool() );
+    ui->runtimeDir->setText( s->value("runtimeDir").toString() );
     s->endGroup();
+
+    QStringList availConfigFiles = availableLanguageConfigFiles();
+    QString configSelectedLanguageConfigFile;
+    if( s->value("IDE/useLanguageConfigFromSession").toBool() && (session != nullptr) )
+        configSelectedLanguageConfigFile = session->value("IDE/interpreter/configFile").toString();
+    else
+        configSelectedLanguageConfigFile = s->value("IDE/interpreter/configFile").toString();
+
+    ui->activeConfigFileComboBox->clear();
+    ui->activeConfigFileComboBox->addItems(availConfigFiles);
+    int index = availConfigFiles.indexOf(configSelectedLanguageConfigFile);
+    if (index != -1)
+        ui->activeConfigFileComboBox->setCurrentIndex(index);
+    selectedLanguageConfigFile = configSelectedLanguageConfigFile; // Happens after setting the combobox entries, since the code triggers stateChanged event.
 
     readLanguageConfig();
 }
 
-void SclangPage::store( Manager *s )
+void SclangPage::store( Manager *s, Session *session, bool useLanguageConfigFromSession)
 {
     s->beginGroup("IDE/interpreter");
     s->setValue("autoStart", ui->autoStart->isChecked());
     s->setValue("runtimeDir", ui->runtimeDir->text());
-    s->setValue("configFile", ui->activeConfigFileComboBox->currentText());
     s->setValue("project", false);
     s->endGroup();
+
+    //need to know in which settings to save, information which is not yet saved in the settings
+    //so value passed directly via useLanguageConfigFromSession
+    if( useLanguageConfigFromSession )
+        session->setValue("IDE/interpreter/configFile", ui->activeConfigFileComboBox->currentText());
+    else
+        s->setValue("IDE/interpreter/configFile", ui->activeConfigFileComboBox->currentText());
 
     writeLanguageConfig();
 }

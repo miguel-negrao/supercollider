@@ -858,6 +858,17 @@ void MainWindow::switchSession( Session *session )
     updateWindowTitle();
 
     mEditors->switchSession(session);
+
+    if( mMain->settings()->value("IDE/useLanguageConfigFromSession").toBool() && mMain->scProcess()->running() ) {
+        QMessageBox::StandardButton reply;
+        reply = QMessageBox::question(this, tr("Session changed"),
+                                    tr("The SuperCollider language configuration is possibly different in this session "
+                                    "Do you want to reboot the interpreter ?"),
+                                    QMessageBox::Yes | QMessageBox::No );
+        if (reply == QMessageBox::Yes)
+            mMain->scProcess()->restartLanguage();
+    }
+
 }
 
 void MainWindow::saveSession( Session *session )
@@ -1359,10 +1370,16 @@ void MainWindow::updateWindowTitle()
 
     QString title;
 
-    s->beginGroup("IDE/interpreter");;
-    QString configFile = s->value("configFile").toString();
-    bool isProject = s->value("project").toBool();
-    s->endGroup();
+    bool isProject;
+    QString configFile;
+
+    if( s->value("IDE/useLanguageConfigFromSession").toBool() && (session != nullptr) ) {
+        isProject= session->value("IDE/interpreter/project").toBool();
+        configFile = session->value("IDE/interpreter/configFile").toString();
+    } else {
+        isProject = s->value("IDE/interpreter/project").toBool();
+        configFile = s->value("IDE/interpreter/configFile").toString();
+    }
 
     if(isProject) {
          QFileInfo configInfo = QFileInfo(configFile);
@@ -1513,10 +1530,22 @@ void MainWindow::onOpenRecentProject( QAction *action )
     prOpenProject(action->text());
 }
 
+template <class T>
+void MainWindow::openProjectSaveSettings(T * settings, QString path) {
+    settings->beginGroup("IDE/interpreter");
+    bool previousWasProject = settings->value("project").toBool();
+    if( !previousWasProject )
+    {
+        settings->setValue("previousConfigFile", settings->value("configFile").toString() );
+    }
+    settings->setValue("configFile", path );
+    settings->setValue("project", true );
+    settings->endGroup();
+}
+
 void MainWindow::prOpenProject(QString path)
 {
     bool isProject = false;
-    Settings::Manager *settings = mMain->settings();
 
     QFileInfo configFileInfo(path);
     const bool configFileExists = configFileInfo.exists();
@@ -1542,15 +1571,11 @@ void MainWindow::prOpenProject(QString path)
     }
 
     if(isProject) {
-        settings->beginGroup("IDE/interpreter");
-        bool previousWasProject = settings->value("project").toBool();
-        if( !previousWasProject )
-        {
-            settings->setValue("previousConfigFile", settings->value("configFile").toString() );
-        }
-        settings->setValue("configFile", path );
-        settings->setValue("project", true );
-        settings->endGroup();
+        Session *session  = mMain->sessionManager()->currentSession();
+        if( mMain->settings()->value("IDE/useLanguageConfigFromSession").toBool() && (session != nullptr) )
+            openProjectSaveSettings( session, path );
+        else
+            openProjectSaveSettings( mMain->settings(), path );
         updateWindowTitle();
         addToRecentProjects(path);
         mActions[ProjectClose]->setEnabled(true);
@@ -1611,12 +1636,19 @@ void MainWindow::openProject()
 
 void MainWindow::saveProjectAs()
 {
-    Settings::Manager *settings = mMain->settings();
-    QString currentConfigFile = settings->value("IDE/interpreter/configFile").toString();
+    QString currentConfigFile;
+    if( mMain->settings()->value("IDE/useLanguageConfigFromSession").toBool() )
+        currentConfigFile = mMain->sessionManager()->currentSession()->value("IDE/interpreter/configFile").toString();
+    else
+        currentConfigFile = mMain->settings()->value("IDE/interpreter/configFile").toString();
     if( QFile::exists(currentConfigFile) )
-        projectWriteDialog([this,settings,currentConfigFile](QString save_path){
+        projectWriteDialog([this,currentConfigFile](QString save_path){
             if( QFile(currentConfigFile).copy(save_path) ) {
-                settings->setValue("IDE/interpreter/configFile", save_path );
+                Session *session  = mMain->sessionManager()->currentSession();
+                if( mMain->settings()->value("IDE/useLanguageConfigFromSession").toBool() && (session != nullptr) )
+                    session->setValue("IDE/interpreter/configFile", save_path);
+                else
+                    mMain->settings()->setValue("IDE/interpreter/configFile", save_path);
                 updateWindowTitle();
             } else {
                 QMessageBox::information(this, tr("SC project - save as"),
@@ -1628,16 +1660,24 @@ void MainWindow::saveProjectAs()
                                  tr("Current project file doesn't exist on disk."));
 }
 
-
-void MainWindow::closeProject()
-{
-    Settings::Manager *settings = mMain->settings();
+template <class T>
+void MainWindow::closeProjectSaveSettings(T * settings) {
     settings->beginGroup("IDE/interpreter");
     QString previousConfigFile = settings->value("previousConfigFile").toString();
     if(previousConfigFile.isEmpty()){ previousConfigFile = QString("sclang_conf.yaml"); }
     settings->setValue("configFile", previousConfigFile);
     settings->setValue("project", false );
     settings->endGroup();
+}
+
+
+void MainWindow::closeProject()
+{
+    Session *session  = mMain->sessionManager()->currentSession();
+    if( mMain->settings()->value("IDE/useLanguageConfigFromSession").toBool() && (session != nullptr) )
+        closeProjectSaveSettings(session);
+    else
+        closeProjectSaveSettings(mMain->settings());
     updateWindowTitle();
     mActions[ProjectClose]->setEnabled(false);
     mActions[ProjectSaveAs]->setEnabled(false);
@@ -1894,7 +1934,7 @@ void MainWindow::hideToolBox()
 
 void MainWindow::showSettings()
 {
-    Settings::Dialog dialog(mMain->settings());
+    Settings::Dialog dialog(mMain->settings(), mMain->sessionManager()->currentSession());
     dialog.resize(700,400);
     int result = dialog.exec();
     if( result == QDialog::Accepted )

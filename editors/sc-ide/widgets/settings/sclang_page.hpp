@@ -27,7 +27,11 @@ namespace Ui {
     class SclangConfigPage;
 }
 
-namespace ScIDE { namespace Settings {
+namespace ScIDE {
+
+struct Session;
+
+namespace Settings {
 
 class Manager;
 
@@ -38,10 +42,11 @@ class SclangPage : public QWidget
 public:
     SclangPage(QWidget *parent = 0);
     ~SclangPage();
+    void loadTemp(Manager *, Session *, bool);
 
 public Q_SLOTS:
-    void load( Manager * );
-    void store( Manager * );
+    void load(Manager *, Session *);
+    void store(Manager *, Session *, bool);
 
 private Q_SLOTS:
     void addIncludePath();

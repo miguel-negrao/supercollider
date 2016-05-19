@@ -28,6 +28,7 @@
 
 #include "sclang_project_page.hpp"
 #include "ui_settings_sclang_project.h"
+#include "../../core/session_manager.hpp"
 #include "../../core/settings/manager.hpp"
 #include "../../core/util/standard_dirs.hpp"
 
@@ -66,35 +67,64 @@ SclangProjectPage::~SclangProjectPage()
     delete ui;
 }
 
-void SclangProjectPage::load( Manager *s )
+
+void SclangProjectPage::loadTemp( Manager *s, Session *session, bool useLanguageConfigFromSession)
 {
     s->beginGroup("IDE/interpreter");
-
     ui->autoStart->setChecked( s->value("autoStart").toBool() );
     ui->runtimeDir->setText( s->value("runtimeDir").toString() );
+    s->endGroup();
 
-    selectedLanguageConfigFile = s->value("configFile").toString();
+    if( useLanguageConfigFromSession )
+        selectedLanguageConfigFile = session->value("IDE/interpreter/configFile").toString();
+    else
+        selectedLanguageConfigFile = s->value("IDE/interpreter/configFile").toString();
+
     QString tempLanguageConfigFileDir = QFileInfo(selectedLanguageConfigFile).canonicalPath();
     qSelectedLanguageConfigFileDir = QDir(tempLanguageConfigFileDir);
     selectedLanguageConfigFileDir = tempLanguageConfigFileDir.toStdString();
-    project = s->value("project").toBool();
 
     ui->activeConfigFileLabel->setText(QString("Current project file: ").append(selectedLanguageConfigFile));
-
-    s->endGroup();
 
     readLanguageConfig(selectedLanguageConfigFile);
 
 }
 
-void SclangProjectPage::store( Manager *s )
+void SclangProjectPage::load( Manager *s, Session *session)
+{
+    s->beginGroup("IDE/interpreter");
+    ui->autoStart->setChecked( s->value("autoStart").toBool() );
+    ui->runtimeDir->setText( s->value("runtimeDir").toString() );
+    s->endGroup();
+
+    if( s->value("IDE/useLanguageConfigFromSession").toBool() && (session != nullptr) )
+        selectedLanguageConfigFile = session->value("IDE/interpreter/configFile").toString();
+    else
+        selectedLanguageConfigFile = s->value("IDE/interpreter/configFile").toString();
+
+    QString tempLanguageConfigFileDir = QFileInfo(selectedLanguageConfigFile).canonicalPath();
+    qSelectedLanguageConfigFileDir = QDir(tempLanguageConfigFileDir);
+    selectedLanguageConfigFileDir = tempLanguageConfigFileDir.toStdString();
+
+    ui->activeConfigFileLabel->setText(QString("Current project file: ").append(selectedLanguageConfigFile));
+
+    readLanguageConfig(selectedLanguageConfigFile);
+
+}
+
+void SclangProjectPage::store( Manager *s, Session *session, bool useLanguageConfigFromSession)
 {
     s->beginGroup("IDE/interpreter");
     s->setValue("autoStart", ui->autoStart->isChecked());
     s->setValue("runtimeDir", ui->runtimeDir->text());
     s->setValue("project", true);
-    QString configSelectedLanguageConfigFile = s->value("configFile").toString();
     s->endGroup();
+
+    QString configSelectedLanguageConfigFile;
+    if( useLanguageConfigFromSession )
+        configSelectedLanguageConfigFile = session->value("IDE/interpreter/configFile").toString();
+    else
+        configSelectedLanguageConfigFile = s->value("IDE/interpreter/configFile").toString();
 
     writeLanguageConfig(configSelectedLanguageConfigFile);
 
@@ -102,7 +132,7 @@ void SclangProjectPage::store( Manager *s )
 
 void SclangProjectPage::doRelativeProject(std::function<void(QString)> func, QString path) {
     std::string stdPath = path.toStdString();
-    if( project && path.size() >= selectedLanguageConfigFileDir.size() &&
+    if( path.size() >= selectedLanguageConfigFileDir.size() &&
            std::equal( selectedLanguageConfigFileDir.begin(), selectedLanguageConfigFileDir.end(), path.begin() ) ) {
         func(qSelectedLanguageConfigFileDir.relativeFilePath(path));
     } else {
