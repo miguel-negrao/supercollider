@@ -124,8 +124,7 @@ void SC_TerminalClient::printUsage()
 			"   -r                             Call Main.run on startup\n"
 			"   -s                             Call Main.stop on shutdown\n"
 			"   -u <network-port-number>       Set UDP listening port (default %d)\n"
-			"   -i <ide-name>                  Specify IDE name (for enabling IDE-specific class code, default \"%s\")\n"
-			"   -a                             Standalone mode (exclude SCClassLibrary and user and system Extensions folders from search path)\n",
+			"   -i <ide-name>                  Specify IDE name (for enabling IDE-specific class code, default \"%s\")\n",
 			memGrowBuf,
 			memSpaceBuf,
 			opt.mPort,
@@ -135,7 +134,7 @@ void SC_TerminalClient::printUsage()
 
 bool SC_TerminalClient::parseOptions(int& argc, char**& argv, Options& opt)
 {
-	const char* optstr = ":d:Dg:hl:m:rsu:i:av";
+	const char* optstr = ":d:Dg:hl:m:rsu:i:v";
 	int c;
 
 	// inhibit error reporting
@@ -191,9 +190,6 @@ bool SC_TerminalClient::parseOptions(int& argc, char**& argv, Options& opt)
 				break;
 			case 'i':
 				gIdeName = optarg;
-				break;
-			case 'a':
-				opt.mStandalone = true;
 				break;
 			default:
 				::post("%s: unknown error (getopt)\n", getName());
@@ -251,13 +247,14 @@ int SC_TerminalClient::run(int argc, char** argv)
 	// read library configuration file
 	if (opt.mLibraryConfigFile)
 		SC_LanguageConfig::setConfigFile(opt.mLibraryConfigFile);
-	SC_LanguageConfig::readLibraryConfig(opt.mStandalone);
+
+	SC_LanguageConfig::readLibraryConfig();
 
 	// initialize runtime
 	initRuntime(opt);
 
 	// startup library
-	compileLibrary(opt.mStandalone);
+	compileLibrary();
 
 	// enter main loop
 	if (codeFile) executeFile(codeFile);
@@ -287,7 +284,7 @@ int SC_TerminalClient::run(int argc, char** argv)
 
 void SC_TerminalClient::recompileLibrary()
 {
-    SC_LanguageClient::recompileLibrary(mOptions.mStandalone);
+    SC_LanguageClient::recompileLibrary();
 }
 
 void SC_TerminalClient::quit(int code)

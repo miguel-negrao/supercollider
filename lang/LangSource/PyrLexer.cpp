@@ -28,6 +28,7 @@
 #include <cerrno>
 #include <limits>
 #include <set>
+#include <functional>
 
 #ifdef _WIN32
 # include <direct.h>
@@ -1932,6 +1933,31 @@ void finiPassOne()
 
 static bool passOne_ProcessDir(const char *dirname, int level)
 {
+	std::string dirname_s;
+	bool isProjectPath = false;
+	auto compareAndReplacePrefix = [](std::string &a, const std::string &b, const std::string &replace)
+	{
+		size_t pos = 0;
+		size_t l =  b.length();
+		if( a.compare(pos, l, b) == 0 )
+			a.replace(pos, l, replace);
+	};
+
+	if( level == 0) {
+		dirname_s = dirname;
+		compareAndReplacePrefix(dirname_s, "%ResourceDirectory%", gLanguageConfig->mResourceDir);
+		compareAndReplacePrefix(dirname_s, "%SystemExtensionDirectory%", gLanguageConfig->mSystemExtensionDir);
+		compareAndReplacePrefix(dirname_s, "%UserExtensionDirectory%", gLanguageConfig->mUserExtensionDir);
+		if( gLanguageConfig->getProject() ) {
+			boost::filesystem::path bfsdirname = boost::filesystem::path(dirname_s);
+			if( !bfsdirname.is_absolute() ){
+				isProjectPath = true;
+				dirname_s = (gLanguageConfig->getConfigFileDirectory() /= bfsdirname).string();
+			}
+		}
+		dirname = dirname_s.c_str();
+	}
+
 	if (!sc_DirectoryExists(dirname))
 		return true;
 
@@ -1941,12 +1967,16 @@ static bool passOne_ProcessDir(const char *dirname, int level)
 
 	bool success = true;
 
-	if (gLanguageConfig && gLanguageConfig->pathIsExcluded(dirname)) {
+	if (gLanguageConfig->pathIsExcluded(dirname)) {
 		post("\texcluding dir: '%s'\n", dirname);
 		return success;
 	}
-
-	if (level == 0) post("\tcompiling dir: '%s'\n", dirname);
+	
+	if(isProjectPath) {
+		if (level == 0) post("\tcompiling dir from project: '%s'\n", dirname);
+	} else {
+		if (level == 0) post("\tcompiling dir: '%s'\n", dirname);
+	}
 
 	SC_DirHandle *dir = sc_OpenDir(dirname);
 	if (!dir) {
@@ -2023,9 +2053,9 @@ bool passOne_ProcessOneFile(const char * filenamearg, int level)
 		return success;
 	}
 
-	if (gLanguageConfig && gLanguageConfig->pathIsExcluded(filename)) {
-	  post("\texcluding file: '%s'\n", filename);
-	  return success;
+	if (gLanguageConfig->pathIsExcluded(filename)) {
+		post("\texcluding file: '%s'\n", filename);
+		return success;
 	}
 
 	if (isValidSourceFileName(filename)) {
@@ -2125,7 +2155,7 @@ void shutdownLibrary()
 	SC_LanguageConfig::freeLibraryConfig();
 }
 
-SCLANG_DLLEXPORT_C bool compileLibrary(bool standalone)
+SCLANG_DLLEXPORT_C bool compileLibrary()
 {
 	//printf("->compileLibrary\n");
 	shutdownLibrary();
@@ -2134,7 +2164,7 @@ SCLANG_DLLEXPORT_C bool compileLibrary(bool standalone)
 	gNumCompiledFiles = 0;
 	compiledOK = false;
 
-	SC_LanguageConfig::readLibraryConfig(standalone);
+	SC_LanguageConfig::readLibraryConfig();
 
 	compileStartTime = elapsedTime();
 
