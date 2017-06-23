@@ -89,6 +89,7 @@ set ( ide_moc_hdr
     widgets/settings/dialog.hpp
     widgets/settings/general_page.hpp
     widgets/settings/sclang_page.hpp
+    widgets/settings/sclang_project_page.hpp
     widgets/settings/editor_page.hpp
     widgets/settings/shortcuts_page.hpp
     widgets/util/path_chooser_widget.hpp
@@ -143,6 +144,7 @@ set ( ide_src
     widgets/settings/dialog.cpp
     widgets/settings/general_page.cpp
     widgets/settings/sclang_page.cpp
+    widgets/settings/sclang_project_page.cpp
     widgets/settings/editor_page.cpp
     widgets/settings/shortcuts_page.cpp
     widgets/util/gui_utilities.cpp
@@ -168,6 +170,7 @@ set( ide_forms
     forms/settings_dialog.ui
     forms/settings_general.ui
     forms/settings_sclang.ui
+    forms/settings_sclang_project.ui
     forms/settings_editor.ui
     forms/settings_shortcuts.ui
 )
