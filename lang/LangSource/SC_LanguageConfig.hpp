@@ -45,8 +45,6 @@ public:
     typedef boost::filesystem::path Path;
     typedef std::vector<Path> DirVector;
 
-    explicit SC_LanguageConfig(bool excludeDefaultPaths);
-
     const DirVector& includedDirectories() const { return mIncludedDirectories; }
     const DirVector& excludedDirectories() const { return mExcludedDirectories; }
     const DirVector& defaultClassLibraryDirectories() const { return mDefaultClassLibraryDirectories; }
@@ -64,7 +62,7 @@ public:
     bool forEachIncludedDirectory(bool (*)(const Path&)) const;
 
     bool getExcludeDefaultPaths() const { return mExcludeDefaultPaths; }
-    void setExcludeDefaultPaths(bool value) { mExcludeDefaultPaths = value; }
+    void setExcludeDefaultPaths(bool value);
 
     static bool readLibraryConfigYAML(const Path&, bool standalone);
     static bool writeLibraryConfigYAML(const Path&);
@@ -85,7 +83,7 @@ private:
     DirVector mIncludedDirectories;
     DirVector mExcludedDirectories;
     DirVector mDefaultClassLibraryDirectories;
-    bool mExcludeDefaultPaths;
+    bool mExcludeDefaultPaths = true;
     static Path gConfigFile;
     static bool gPostInlineWarnings;
 };
