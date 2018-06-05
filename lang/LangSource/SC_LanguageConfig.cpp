@@ -95,24 +95,21 @@ bool SC_LanguageConfig::removeIncludedDirectory(const Path& path) { return remov
 
 bool SC_LanguageConfig::removeExcludedDirectory(const Path& path) { return removePath(mExcludedDirectories, path); }
 
-void SC_LanguageConfig::setExcludeDefaultPaths(bool value) { mExcludeDefaultPaths = value; }
-
-bool SC_LanguageConfig::getExcludeDefaultPaths() const { return mExcludeDefaultPaths; }
-void SC_LanguageConfig::processPathList(const char* nodeName, YAML::Node& doc, void (*func)(const Path&)) {
+void processPathList(const char* nodeName, YAML::Node& doc,
+                     const std::function<void(const boost::filesystem::path&)>& func) {
     const YAML::Node& items = doc[nodeName];
     if (items && items.IsSequence()) {
-        std::string emptyString;
         for (auto const& item : items) {
-            const std::string& path = item.as<std::string>(emptyString);
+            const std::string& path = item.as<std::string>("");
             if (!path.empty()) {
-                const Path& native_path = SC_Codecvt::utf8_str_to_path(path);
+                const boost::filesystem::path& native_path = SC_Codecvt::utf8_str_to_path(path);
                 func(native_path);
             }
         }
     }
 }
 
-void SC_LanguageConfig::processBool(const char* nodeName, YAML::Node& doc, const std::function<void(bool)>& func) {
+void processBool(const char* nodeName, YAML::Node& doc, const std::function<void(bool)>& func) {
     const YAML::Node& item = doc[nodeName];
     if (item) {
         try {
@@ -133,7 +130,7 @@ bool SC_LanguageConfig::readLibraryConfigYAML(const Path& fileName, bool standal
         if (doc) {
             processBool(POST_INLINE_WARNINGS, doc, [](bool b) { gPostInlineWarnings = b; });
             processBool(EXCLUDE_DEFAULT_PATHS, doc,
-                        [&standalone](bool b) { gLanguageConfig = new SC_LanguageConfig(b || standalone); });
+                        [standalone](bool b) { gLanguageConfig = new SC_LanguageConfig(b || standalone); });
             if (!gLanguageConfig)
                 gLanguageConfig = new SC_LanguageConfig(standalone);
 

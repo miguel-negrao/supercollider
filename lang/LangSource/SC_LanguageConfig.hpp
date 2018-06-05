@@ -26,7 +26,6 @@
 #include <vector>
 #include <string>
 #include <boost/filesystem/path.hpp>
-#include <yaml-cpp/yaml.h> // YAML
 
 class SC_LanguageConfig;
 extern SC_LanguageConfig* gLanguageConfig;
@@ -64,10 +63,8 @@ public:
 
     bool forEachIncludedDirectory(bool (*)(const Path&)) const;
 
-    bool getExcludeDefaultPaths() const;
-    void setExcludeDefaultPaths(bool value);
-    void static processPathList(const char* nodeName, YAML::Node& doc, void (*func)(const Path&));
-    void static processBool(const char* nodeName, YAML::Node& doc, const std::function<void(bool)>& func);
+    bool getExcludeDefaultPaths() const { return mExcludeDefaultPaths; }
+    void setExcludeDefaultPaths(bool value) { mExcludeDefaultPaths = value; }
 
     static bool readLibraryConfigYAML(const Path&, bool standalone);
     static bool writeLibraryConfigYAML(const Path&);
@@ -88,7 +85,7 @@ private:
     DirVector mIncludedDirectories;
     DirVector mExcludedDirectories;
     DirVector mDefaultClassLibraryDirectories;
-    bool mExcludeDefaultPaths = false;
+    bool mExcludeDefaultPaths;
     static Path gConfigFile;
     static bool gPostInlineWarnings;
 };
