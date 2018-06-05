@@ -2927,9 +2927,8 @@ void switchToThread(VMGlobals* g, PyrThread* newthread, int oldstate, int* numAr
         return;
     // postfl("->switchToThread %d %p -> %p\n", oldstate, oldthread, newthread);
     // post("->switchToThread from %s:%s\n", slotRawClass(&g->method->ownerclass)->name.us->name,
-    // g->slotRawSymbol(&method->name)->name); post("->stack %p  g->sp %p [%d]  g->top %p [%d]\n",
-    // g->gc->Stack()->slots,
-    // g->sp, g->sp - g->gc->Stack()->slots, g->top, g->top - g->gc->Stack()->slots); assert(g->gc->SanityCheck());
+    // g->slotRawSymbol(&method->name)->name); post("->stack %p  g->sp %p [%d]  g->top %p [%d]\n", 	g->gc->Stack()->slots,
+    //g->sp, g->sp - g->gc->Stack()->slots, g->top, g->top - g->gc->Stack()->slots); assert(g->gc->SanityCheck());
     // CallStackSanity(g, "switchToThreadA");
     // gcDumpInfo(g->gc);
     gc = g->gc;
@@ -3676,6 +3675,11 @@ static int prLanguageConfig_setPostInlineWarnings(struct VMGlobals* g, int numAr
     return errNone;
 }
 
+static int prLanguageConfig_getExcludeDefaultPaths(struct VMGlobals* g, int numArgsPushed) {
+    PyrSlot* result = g->sp;
+    SetBool(result, gLanguageConfig->getExcludeDefaultPaths());
+    return errNone;
+}
 
 static int prVersionMajor(struct VMGlobals* g, int numArgsPushed) {
     PyrSlot* result = g->sp;
@@ -4260,6 +4264,8 @@ void initPrimitives() {
     definePrimitive(base, index++, "_LanguageConfig_getPostInlineWarnings", prLanguageConfig_getPostInlineWarnings, 1,
                     0);
     definePrimitive(base, index++, "_LanguageConfig_setPostInlineWarnings", prLanguageConfig_setPostInlineWarnings, 2,
+                    0);
+    definePrimitive(base, index++, "_LanguageConfig_getExcludeDefaultPaths", prLanguageConfig_getExcludeDefaultPaths, 1,
                     0);
 
     definePrimitive(base, index++, "_SC_VersionMajor", prVersionMajor, 1, 0);
