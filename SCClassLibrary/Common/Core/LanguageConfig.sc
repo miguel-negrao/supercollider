@@ -47,4 +47,8 @@ LanguageConfig {
 		_LanguageConfig_getExcludeDefaultPaths
 		^this.primitiveFailed
 	}
+	*defaultPathsExcluded_ {|aBoolean|
+		_LanguageConfig_setExcludeDefaultPaths
+		^this.primitiveFailed
+	}
 }
